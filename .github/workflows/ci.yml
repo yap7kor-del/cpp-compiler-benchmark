@@ -87,7 +87,7 @@ jobs:
             compiler: arm-none-eabi-gcc
             cxx: arm-none-eabi-g++
             arch: arm-cortex-m4
-            opt_flag: -Os
+            opt_flag: -Os -mcpu=cortex-m4 -mthumb --specs=nosys.specs
             build_type: MinSizeRel
 
     steps:
@@ -115,22 +115,26 @@ jobs:
             sudo update-alternatives --set cc /usr/bin/clang
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi
+            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
           fi
           echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
           echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
 
       - name: Configure Conan Profile
-        if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
-          conan profile detect --force
+          if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
+            CC=gcc CXX=g++ conan profile detect --force
+          else
+            conan profile detect --force
+          fi
 
       - name: Run Conan Install
-        # Skip Conan for cross-compiled ARM bare-metal targets unless you have matching binaries,
-        # otherwise run for native targets.
-        if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
-          conan install . --build=missing -s build_type=${{ matrix.build_type }}
+          if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
+            conan install . --build=missing -s build_type=${{ matrix.build_type }} -o "fmt/*:header_only=True"
+          else
+            conan install . --build=missing -s build_type=${{ matrix.build_type }}
+          fi
 
       - name: Configure CMake
         run: |
