@@ -40,11 +40,13 @@ jobs:
           # --- GCC builds on Linux (x86_64) ---
           - os: ubuntu-latest
             compiler: gcc
+            cxx: g++
             arch: x86_64
             opt_flag: -O0
             build_type: Debug
           - os: ubuntu-latest
             compiler: gcc
+            cxx: g++
             arch: x86_64
             opt_flag: -O3
             build_type: Release
@@ -52,11 +54,13 @@ jobs:
           # --- Clang builds on Linux (x86_64) ---
           - os: ubuntu-latest
             compiler: clang
+            cxx: clang++
             arch: x86_64
             opt_flag: -O2
             build_type: Release
           - os: ubuntu-latest
             compiler: clang
+            cxx: clang++
             arch: x86_64
             opt_flag: -Ofast
             build_type: Release
@@ -64,6 +68,7 @@ jobs:
           # --- Cross-Compilation for ARM (Cortex-M or Aarch64) in CI ---
           - os: ubuntu-latest
             compiler: arm-none-eabi-gcc
+            cxx: arm-none-eabi-g++
             arch: arm-cortex-m4
             opt_flag: -Os
             build_type: MinSizeRel
@@ -106,7 +111,7 @@ jobs:
           cmake -B build \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_FLAGS="${{ matrix.opt_flag }}" \
-            -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
 
       - name: Build Project
         run: |
