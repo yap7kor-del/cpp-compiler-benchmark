@@ -1,15 +1,24 @@
 #include "filter.hpp"
+#include <stdexcept>
 
 namespace dsp {
 
 FirFilter::FirFilter(const std::vector<float>& coefficients)
-    : coeffs_(coefficients), history_(coefficients.size(), 0.0f), write_idx_(0) {}
+    : coeffs_(coefficients), history_(coefficients.size(), 0.0f), write_idx_(0) {
+    if (coeffs_.empty()) {
+        throw std::invalid_argument("FIR filter coefficients cannot be empty");
+    }
+}
 
 float FirFilter::tick(float sample) {
+    size_t size = coeffs_.size();
+    if (size == 0) {
+        return 0.0f;
+    }
+
     history_[write_idx_] = sample;
     
     float output = 0.0f;
-    size_t size = coeffs_.size();
     
     // Circular buffer dot product
     for (size_t i = 0; i < size; ++i) {
