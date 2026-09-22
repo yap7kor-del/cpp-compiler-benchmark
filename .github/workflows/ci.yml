@@ -117,21 +117,19 @@ jobs:
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
             sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
           fi
-          echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
-          echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
+          if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
+            echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+            echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
+          fi
 
       - name: Configure Conan Profile
         run: |
-          if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            CC=gcc CXX=g++ conan profile detect --force
-          else
-            conan profile detect --force
-          fi
+          conan profile detect --force
 
       - name: Run Conan Install
         run: |
           if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            conan install . --build=missing -s build_type=${{ matrix.build_type }} -o "fmt/*:header_only=True"
+            conan install --requires="fmt/11.0.2" -g CMakeDeps -s build_type=${{ matrix.build_type }} -o "fmt/*:header_only=True" --output-folder="build/${{ matrix.build_type }}/generators"
           else
             conan install . --build=missing -s build_type=${{ matrix.build_type }}
           fi
@@ -141,6 +139,8 @@ jobs:
           TOOLCHAIN_ARG=""
           if [ -f "build/${{ matrix.build_type }}/generators/conan_toolchain.cmake" ]; then
             TOOLCHAIN_ARG="-DCMAKE_TOOLCHAIN_FILE=build/${{ matrix.build_type }}/generators/conan_toolchain.cmake"
+          else
+            TOOLCHAIN_ARG="-DCMAKE_PREFIX_PATH=build/${{ matrix.build_type }}/generators"
           fi
           cmake -B build \
             $TOOLCHAIN_ARG \
