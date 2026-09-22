@@ -110,36 +110,29 @@ jobs:
             sudo apt-get install -y g++
           elif [ "${{ matrix.compiler }}" = "clang" ]; then
             sudo apt-get install -y clang
+            sudo update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+            sudo update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+            sudo update-alternatives --set cc /usr/bin/clang
+            sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
             sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi
           fi
+          echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
+          echo "CXX=${{ matrix.cxx }}" >> $GITHUB_ENV
 
       - name: Configure Conan Profile
         if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
-          CC=${{ matrix.compiler }} CXX=${{ matrix.cxx }} conan profile detect --force
-          PROFILE_PATH=$(conan profile path default)
-          echo "[buildenv]" >> "$PROFILE_PATH"
-          echo "CC=${{ matrix.compiler }}" >> "$PROFILE_PATH"
-          echo "CXX=${{ matrix.cxx }}" >> "$PROFILE_PATH"
-          echo "[conf]" >> "$PROFILE_PATH"
-          echo "tools.build:compiler_executables={'c': '${{ matrix.compiler }}', 'cpp': '${{ matrix.cxx }}'}" >> "$PROFILE_PATH"
-          conan profile show default
+          conan profile detect --force
 
       - name: Run Conan Install
         # Skip Conan for cross-compiled ARM bare-metal targets unless you have matching binaries,
         # otherwise run for native targets.
         if: matrix.compiler != 'arm-none-eabi-gcc'
-        env:
-          CC: ${{ matrix.compiler }}
-          CXX: ${{ matrix.cxx }}
         run: |
           conan install . --build=missing -s build_type=${{ matrix.build_type }}
 
       - name: Configure CMake
-        env:
-          CC: ${{ matrix.compiler }}
-          CXX: ${{ matrix.cxx }}
         run: |
           TOOLCHAIN_ARG=""
           if [ -f "build/${{ matrix.build_type }}/generators/conan_toolchain.cmake" ]; then
