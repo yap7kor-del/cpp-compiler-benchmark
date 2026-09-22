@@ -15,10 +15,28 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install Static Analysis Tools
+      - name: Setup Python (For Conan)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Conan & Static Analysis Tools
         run: |
+          pip install conan
+          conan profile detect --force
           sudo apt-get update
-          sudo apt-get install -y cppcheck clang-tidy libfmt-dev
+          sudo apt-get install -y cppcheck clang-tidy
+
+      - name: Install Dependencies with Conan
+        run: |
+          conan install . --build=missing -s build_type=Release
+
+      - name: Generate Compile Commands with CMake
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=build/Release/generators/conan_toolchain.cmake \
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
       - name: Run Cppcheck
         run: |
@@ -26,8 +44,7 @@ jobs:
 
       - name: Run Clang-Tidy
         run: |
-          # Normally runs with compile_commands.json, but can also run in standalone mode:
-          clang-tidy src/math/*.cpp src/dsp/*.cpp src/main.cpp -- -std=c++20 -Isrc
+          clang-tidy -p build src/math/*.cpp src/dsp/*.cpp src/main.cpp
 
   # Job 2: Build Matrix for Compilers, Architectures, and Optimizations
   build-and-test:
@@ -85,7 +102,6 @@ jobs:
       - name: Install Conan
         run: |
           pip install conan
-          conan profile detect --force
 
       - name: Install System Compilers
         run: |
@@ -98,17 +114,26 @@ jobs:
             sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi
           fi
 
+      - name: Configure Conan Profile
+        if: matrix.compiler != 'arm-none-eabi-gcc'
+        run: |
+          CC=${{ matrix.compiler }} CXX=${{ matrix.cxx }} conan profile detect --force
+
       - name: Run Conan Install
         # Skip Conan for cross-compiled ARM bare-metal targets unless you have matching binaries,
         # otherwise run for native targets.
         if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
-          conan install . --build=missing -s build_type=${{ matrix.build_type }} -s compiler=${{ matrix.compiler }}
+          conan install . --build=missing -s build_type=${{ matrix.build_type }}
 
       - name: Configure CMake
         run: |
-          # Pass compiler flags and optimizer overrides via CMake variables
+          TOOLCHAIN_ARG=""
+          if [ -f "build/${{ matrix.build_type }}/generators/conan_toolchain.cmake" ]; then
+            TOOLCHAIN_ARG="-DCMAKE_TOOLCHAIN_FILE=build/${{ matrix.build_type }}/generators/conan_toolchain.cmake"
+          fi
           cmake -B build \
+            $TOOLCHAIN_ARG \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_FLAGS="${{ matrix.opt_flag }}" \
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
