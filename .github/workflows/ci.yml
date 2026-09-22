@@ -1,0 +1,118 @@
+name: C/C++ CI Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  # Job 1: Static Analysis (Run before compiling to catch errors early)
+  static-analysis:
+    name: Static Analysis & Linting
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Static Analysis Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cppcheck clang-tidy
+
+      - name: Run Cppcheck
+        run: |
+          cppcheck --enable=all --inconclusive --std=c++20 --suppress=missingIncludeSystem src/
+
+      - name: Run Clang-Tidy
+        run: |
+          # Normally runs with compile_commands.json, but can also run in standalone mode:
+          clang-tidy src/math/*.cpp src/dsp/*.cpp src/main.cpp -- -std=c++20 -Isrc
+
+  # Job 2: Build Matrix for Compilers, Architectures, and Optimizations
+  build-and-test:
+    name: Build (${{ matrix.compiler }}, ${{ matrix.arch }}, ${{ matrix.opt_flag }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # --- GCC builds on Linux (x86_64) ---
+          - os: ubuntu-latest
+            compiler: gcc
+            arch: x86_64
+            opt_flag: -O0
+            build_type: Debug
+          - os: ubuntu-latest
+            compiler: gcc
+            arch: x86_64
+            opt_flag: -O3
+            build_type: Release
+
+          # --- Clang builds on Linux (x86_64) ---
+          - os: ubuntu-latest
+            compiler: clang
+            arch: x86_64
+            opt_flag: -O2
+            build_type: Release
+          - os: ubuntu-latest
+            compiler: clang
+            arch: x86_64
+            opt_flag: -Ofast
+            build_type: Release
+
+          # --- Cross-Compilation for ARM (Cortex-M or Aarch64) in CI ---
+          - os: ubuntu-latest
+            compiler: arm-none-eabi-gcc
+            arch: arm-cortex-m4
+            opt_flag: -Os
+            build_type: MinSizeRel
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Python (For Conan)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Conan
+        run: |
+          pip install conan
+          conan profile detect --force
+
+      - name: Install System Compilers
+        run: |
+          sudo apt-get update
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get install -y g++
+          elif [ "${{ matrix.compiler }}" = "clang" ]; then
+            sudo apt-get install -y clang
+          elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
+            sudo apt-get install -y gcc-arm-none-eabi g++-arm-none-eabi
+          fi
+
+      - name: Run Conan Install
+        # Skip Conan for cross-compiled ARM bare-metal targets unless you have matching binaries,
+        # otherwise run for native targets.
+        if: matrix.compiler != 'arm-none-eabi-gcc'
+        run: |
+          conan install . --build=missing -s build_type=${{ matrix.build_type }} -s compiler=${{ matrix.compiler }}
+
+      - name: Configure CMake
+        run: |
+          # Pass compiler flags and optimizer overrides via CMake variables
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_CXX_FLAGS="${{ matrix.opt_flag }}" \
+            -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'clang' && 'clang++' || 'g++' }}
+
+      - name: Build Project
+        run: |
+          cmake --build build --parallel
+
+      - name: Run Benchmarks (Only on Native OS)
+        if: matrix.compiler != 'arm-none-eabi-gcc'
+        run: |
+          ./build/EmbeddedApp

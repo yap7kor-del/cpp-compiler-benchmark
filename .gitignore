@@ -1,0 +1,99 @@
+compiler-options.txt
+
+# ==============================================================================
+# Build & Output Directories
+# ==============================================================================
+build/
+build-*/
+cmake-build-*/
+bin/
+out/
+
+# Conan & CMake presets
+CMakeUserPresets.json
+conan.lock
+
+# CMake build outputs and temporary files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+*.cmake
+!CMakeLists.txt
+!src/**/*.cmake
+compile_commands.json
+.cache/
+
+# ==============================================================================
+# Compiled Objects, Binaries, and Libraries
+# ==============================================================================
+*.o
+*.obj
+*.so
+*.so.*
+*.dylib
+*.dll
+*.a
+*.lib
+*.la
+*.lai
+*.exe
+*.out
+*.app
+*.elf
+*.bin
+*.hex
+*.map
+
+# Dependency & precompiled header files
+*.d
+*.gch
+*.pch
+
+# Debugging, Symbols & Profiling
+*.dSYM/
+*.su
+*.idb
+*.pdb
+*.ilk
+gmon.out
+*.gcda
+*.gcno
+*.gcov
+
+# ==============================================================================
+# IDEs & Editors
+# ==============================================================================
+# Visual Studio
+.vs/
+*.sln.docstates
+*.user
+*.suo
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# JetBrains / CLion
+.idea/
+
+# Editors & swap files
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+.#*
+#*#
+
+# ==============================================================================
+# Operating System & Environment
+# ==============================================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
