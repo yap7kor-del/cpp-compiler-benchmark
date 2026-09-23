@@ -168,11 +168,19 @@ jobs:
         run: |
           ./build/EmbeddedApp
           
+      
+      # Emulated execution for ARM Cortex-M4
       - name: Run Embedded Binary (via QEMU User Emulation)
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
+          # 1. Print binary memory section sizes (FLASH / RAM consumption)
           arm-none-eabi-size build/EmbeddedApp
-          qemu-arm build/EmbeddedApp
+
+          # 2. Run under QEMU user-mode with semihosting enabled for Cortex-M4
+          # -semihosting: intercepts the BKPT 0xAB trap so printf outputs to CI stdout
+          # -cpu cortex-m4: ensures Thumb-2 DSP instructions decode cleanly
+          qemu-arm -cpu cortex-m4 -semihosting build/EmbeddedApp
+
 
       # # Emulated execution for ARM Cortex-M4
       # - name: Run Embedded Binary (via QEMU Emulation)
