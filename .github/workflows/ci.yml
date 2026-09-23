@@ -117,7 +117,7 @@ jobs:
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
             # Install arm-none-eabi toolchain and newlib runtime libraries
-            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-system-arm
           fi
           if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
             echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
@@ -181,12 +181,19 @@ jobs:
           echo "Verifying ELF architecture headers:"
           arm-none-eabi-readelf -h build/EmbeddedApp | grep -E "Class|Machine|Flags"
           echo "ARM Cortex-M3 build verified successfully."
-      
+            # Execution & footprint verification for ARM Cortex-M3 (via QEMU)
+        
+
       - name: Run ARM Binary via QEMU
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
+          echo "=========================================="
+          echo "ARM Cortex-M3 Binary Footprint Report"
+          echo "=========================================="
           arm-none-eabi-size -A -d build/EmbeddedApp
 
+          echo ""
+          echo "Executing under QEMU ARM System Emulation (MPS2 AN385)..."
           timeout 20s qemu-system-arm \
             -M mps2-an385 \
             -cpu cortex-m3 \
