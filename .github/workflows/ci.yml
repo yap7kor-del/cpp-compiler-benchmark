@@ -144,11 +144,20 @@ jobs:
           else
             TOOLCHAIN_ARG="-DCMAKE_PREFIX_PATH=build/${{ matrix.build_type }}/generators"
           fi
+
+          # Prevent CMake try_compile failure on bare-metal ARM
+          EXTRA_CROSS_ARGS=""
+          if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
+            EXTRA_CROSS_ARGS="-DCMAKE_SYSTEM_NAME=Generic -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY"
+          fi
+
           cmake -B build \
             $TOOLCHAIN_ARG \
+            $EXTRA_CROSS_ARGS \
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_FLAGS="${{ matrix.opt_flag }}" \
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
+
 
       - name: Build Project
         run: |
