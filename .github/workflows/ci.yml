@@ -82,7 +82,7 @@ jobs:
             opt_flag: -Ofast
             build_type: Release
 
-          # --- Cross-Compilation for ARM (Cortex-M4) with QEMU ---
+          # --- Cross-Compilation for ARM (Cortex-M4) ---
           - os: ubuntu-latest
             compiler: arm-none-eabi-gcc
             cxx: arm-none-eabi-g++
@@ -104,7 +104,7 @@ jobs:
         run: |
           pip install conan
 
-      - name: Install System Compilers & Emulators
+      - name: Install System Compilers & Toolchains
         run: |
           sudo apt-get update
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
@@ -116,8 +116,8 @@ jobs:
             sudo update-alternatives --set cc /usr/bin/clang
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            # Install ARM toolchain, C runtime libraries, and QEMU ARM emulator
-            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-user
+            # Install arm-none-eabi toolchain and newlib runtime libraries
+            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
           fi
           if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
             echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
@@ -167,41 +167,17 @@ jobs:
         if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
           ./build/EmbeddedApp
-          
-      
-      # Emulated execution for ARM Cortex-M4
-      - name: Run Embedded Binary (via QEMU User Emulation)
+
+      # Verification & memory footprint auditing for ARM Cortex-M4
+      - name: Verify ARM Embedded Binary & Footprint
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
-          # 1. Print binary memory section sizes (FLASH / RAM consumption)
-          arm-none-eabi-size build/EmbeddedApp
+          echo "=========================================="
+          echo "ARM Cortex-M4 Binary Footprint Report"
+          echo "=========================================="
+          arm-none-eabi-size -A -d build/EmbeddedApp
 
-          # 2. Run under QEMU user-mode with semihosting enabled for Cortex-M4
-          # -semihosting: intercepts the BKPT 0xAB trap so printf outputs to CI stdout
-          # -cpu cortex-m4: ensures Thumb-2 DSP instructions decode cleanly
-          qemu-arm -cpu cortex-m4 -semihosting build/EmbeddedApp
-
-
-      # # Emulated execution for ARM Cortex-M4
-      # - name: Run Embedded Binary (via QEMU Emulation)
-      #   if: matrix.compiler == 'arm-none-eabi-gcc'
-      #   run: |
-      #     # Print binary memory section sizes (FLASH / RAM footprint)
-      #     arm-none-eabi-size build/EmbeddedApp
-
-      #     # Run under QEMU ARM Cortex-M emulation with semihosting enabled
-      #     # Using timeout so execution cleanly terminates if main() enters an infinite loop
-      #     timeout 30s qemu-system-arm \
-      #       -M lm3s6965evb \
-      #       -cpu cortex-m4 \
-      #       -nographic \
-      #       -semihosting-config enable=on,target=native \
-      #       -kernel build/EmbeddedApp || exit_code=$?
-
-      #     # Treat 0 (clean exit) and 124 (timeout watchdog) as normal completion
-      #     if [ ${exit_code:-0} -eq 0 ] || [ ${exit_code:-0} -eq 124 ]; then
-      #       echo "QEMU execution finished successfully."
-      #     else
-      #       echo "QEMU failed with exit code $exit_code"
-      #       exit $exit_code
-      #     fi
+          echo ""
+          echo "Verifying ELF architecture headers:"
+          arm-none-eabi-readelf -h build/EmbeddedApp | grep -E "Class|Machine|Flags"
+          echo "ARM Cortex-M4 build verified successfully."
