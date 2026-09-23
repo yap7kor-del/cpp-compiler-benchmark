@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
+
 project(EmbeddedApp CXX)
 
 # Force C++20 standard
@@ -8,7 +9,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # 1. COMPILER-SPECIFIC CONFIGURATIONS (GCC & Clang)
 # Here we check which compiler CMake has detected (via Conan Toolchain or System)
 # and apply strict compiler warning flags accordingly.
-
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "Configuring for GCC compiler...")
     add_compile_options(
@@ -57,16 +57,16 @@ target_include_directories(EmbeddedApp PRIVATE src)
 target_link_libraries(EmbeddedApp PRIVATE fmt::fmt)
 
 # 4. ARM BARE-METAL & QEMU SEMIHOSTING SPECIFICATIONS
-# When compiling with arm-none-eabi, link against rdimon (semihosting)
-# and nano.specs (lightweight standard library).
 if(CMAKE_CXX_COMPILER MATCHES "arm-none-eabi-")
     message(STATUS "Configuring bare-metal ARM linker specifications for QEMU semihosting...")
     target_link_options(EmbeddedApp PRIVATE
         "-mcpu=cortex-m4"
         "-mthumb"
-        "--specs=nano.specs"     # Minimized embedded C library
-        "--specs=rdimon.specs"   # Semihosting support for QEMU I/O
+        "--specs=rdimon.specs"   # Semihosting support for QEMU I/O (printf, puts, exit)
+        "--specs=nosys.specs"    # Provides default stubs for non-I/O OS calls
+        "-Wl,--defsym=_getentropy=0" # Resolves missing Newlib 4.4 entropy symbol
     )
-    # Link the semihosting library
+
+    # Link the semihosting runtime library
     target_link_libraries(EmbeddedApp PRIVATE rdimon)
 endif()

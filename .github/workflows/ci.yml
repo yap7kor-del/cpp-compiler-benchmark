@@ -87,7 +87,7 @@ jobs:
             compiler: arm-none-eabi-gcc
             cxx: arm-none-eabi-g++
             arch: arm-cortex-m4
-            # Keep compiler flags clean (no linker specs here)
+            # Pure compiler optimization flags (linker specs stay in CMakeLists.txt)
             opt_flag: -Os -mcpu=cortex-m4 -mthumb
             build_type: MinSizeRel
 
@@ -116,7 +116,7 @@ jobs:
             sudo update-alternatives --set cc /usr/bin/clang
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            # Install arm-none-eabi toolchain, newlib libraries, and QEMU ARM system emulator
+            # Install ARM toolchain, C runtime libraries, and QEMU ARM emulator
             sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-system-arm
           fi
           if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
@@ -145,7 +145,7 @@ jobs:
             TOOLCHAIN_ARG="-DCMAKE_PREFIX_PATH=build/${{ matrix.build_type }}/generators"
           fi
 
-          # Prevent CMake try_compile failure on bare-metal ARM
+          # Avoid try_compile linker failures on bare-metal ARM
           EXTRA_CROSS_ARGS=""
           if [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
             EXTRA_CROSS_ARGS="-DCMAKE_SYSTEM_NAME=Generic -DCMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY"
@@ -157,7 +157,6 @@ jobs:
             -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_CXX_FLAGS="${{ matrix.opt_flag }}" \
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}
-
 
       - name: Build Project
         run: |
@@ -173,19 +172,19 @@ jobs:
       - name: Run Embedded Binary (via QEMU Emulation)
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
-          # Print binary memory section sizes (FLASH / RAM consumption)
+          # Print binary memory section sizes (FLASH / RAM footprint)
           arm-none-eabi-size build/EmbeddedApp
 
           # Run under QEMU ARM Cortex-M emulation with semihosting enabled
-          # Using timeout to ensure pipeline terminates if execution loops indefinitely
+          # Using timeout so execution cleanly terminates if main() enters an infinite loop
           timeout 30s qemu-system-arm \
             -M lm3s6965evb \
             -cpu cortex-m4 \
             -nographic \
             -semihosting-config enable=on,target=native \
             -kernel build/EmbeddedApp || exit_code=$?
-          
-          # Allow clean exit (0) or timeout/halt status codes as successful completion
+
+          # Treat 0 (clean exit) and 124 (timeout watchdog) as normal completion
           if [ ${exit_code:-0} -eq 0 ] || [ ${exit_code:-0} -eq 124 ]; then
             echo "QEMU execution finished successfully."
           else
