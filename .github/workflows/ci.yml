@@ -117,7 +117,7 @@ jobs:
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
             # Install ARM toolchain, C runtime libraries, and QEMU ARM emulator
-            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-system-arm
+            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-user
           fi
           if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
             echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
@@ -167,27 +167,33 @@ jobs:
         if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
           ./build/EmbeddedApp
-
-      # Emulated execution for ARM Cortex-M4
-      - name: Run Embedded Binary (via QEMU Emulation)
+          
+      - name: Run Embedded Binary (via QEMU User Emulation)
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
-          # Print binary memory section sizes (FLASH / RAM footprint)
           arm-none-eabi-size build/EmbeddedApp
+          qemu-arm build/EmbeddedApp
 
-          # Run under QEMU ARM Cortex-M emulation with semihosting enabled
-          # Using timeout so execution cleanly terminates if main() enters an infinite loop
-          timeout 30s qemu-system-arm \
-            -M lm3s6965evb \
-            -cpu cortex-m4 \
-            -nographic \
-            -semihosting-config enable=on,target=native \
-            -kernel build/EmbeddedApp || exit_code=$?
+      # # Emulated execution for ARM Cortex-M4
+      # - name: Run Embedded Binary (via QEMU Emulation)
+      #   if: matrix.compiler == 'arm-none-eabi-gcc'
+      #   run: |
+      #     # Print binary memory section sizes (FLASH / RAM footprint)
+      #     arm-none-eabi-size build/EmbeddedApp
 
-          # Treat 0 (clean exit) and 124 (timeout watchdog) as normal completion
-          if [ ${exit_code:-0} -eq 0 ] || [ ${exit_code:-0} -eq 124 ]; then
-            echo "QEMU execution finished successfully."
-          else
-            echo "QEMU failed with exit code $exit_code"
-            exit $exit_code
-          fi
+      #     # Run under QEMU ARM Cortex-M emulation with semihosting enabled
+      #     # Using timeout so execution cleanly terminates if main() enters an infinite loop
+      #     timeout 30s qemu-system-arm \
+      #       -M lm3s6965evb \
+      #       -cpu cortex-m4 \
+      #       -nographic \
+      #       -semihosting-config enable=on,target=native \
+      #       -kernel build/EmbeddedApp || exit_code=$?
+
+      #     # Treat 0 (clean exit) and 124 (timeout watchdog) as normal completion
+      #     if [ ${exit_code:-0} -eq 0 ] || [ ${exit_code:-0} -eq 124 ]; then
+      #       echo "QEMU execution finished successfully."
+      #     else
+      #       echo "QEMU failed with exit code $exit_code"
+      #       exit $exit_code
+      #     fi
