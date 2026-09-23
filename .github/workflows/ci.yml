@@ -181,3 +181,13 @@ jobs:
           echo "Verifying ELF architecture headers:"
           arm-none-eabi-readelf -h build/EmbeddedApp | grep -E "Class|Machine|Flags"
           echo "ARM Cortex-M4 build verified successfully."
+      - name: Run ARM Binary via QEMU
+        if: matrix.compiler == 'arm-none-eabi-gcc'
+        run: |
+          sudo apt-get install -y qemu-system-arm
+          timeout 15s qemu-system-arm \
+            -M mps2-an385 \
+            -cpu cortex-m4 \
+            -nographic \
+            -semihosting \
+            -kernel build/EmbeddedApp || true
