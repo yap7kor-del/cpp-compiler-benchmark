@@ -82,13 +82,13 @@ jobs:
             opt_flag: -Ofast
             build_type: Release
 
-          # --- Cross-Compilation for ARM (Cortex-M4) ---
+          # --- Cross-Compilation for ARM (Cortex-M3) ---
           - os: ubuntu-latest
             compiler: arm-none-eabi-gcc
             cxx: arm-none-eabi-g++
-            arch: arm-cortex-m4
+            arch: arm-cortex-m3
             # Pure compiler optimization flags (linker specs stay in CMakeLists.txt)
-            opt_flag: -Os -mcpu=cortex-m4 -mthumb
+            opt_flag: -Os -mcpu=cortex-m3 -mthumb
             build_type: MinSizeRel
 
     steps:
@@ -168,19 +168,19 @@ jobs:
         run: |
           ./build/EmbeddedApp
 
-      # Verification & memory footprint auditing for ARM Cortex-M4
+      # Verification & memory footprint auditing for ARM Cortex-M3
       - name: Verify ARM Embedded Binary & Footprint
         if: matrix.compiler == 'arm-none-eabi-gcc'
         run: |
           echo "=========================================="
-          echo "ARM Cortex-M4 Binary Footprint Report"
+          echo "ARM Cortex-M3 Binary Footprint Report"
           echo "=========================================="
           arm-none-eabi-size -A -d build/EmbeddedApp
 
           echo ""
           echo "Verifying ELF architecture headers:"
           arm-none-eabi-readelf -h build/EmbeddedApp | grep -E "Class|Machine|Flags"
-          echo "ARM Cortex-M4 build verified successfully."
+          echo "ARM Cortex-M3 build verified successfully."
       
       - name: Run ARM Binary via QEMU
         if: matrix.compiler == 'arm-none-eabi-gcc'
