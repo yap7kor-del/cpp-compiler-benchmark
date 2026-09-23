@@ -55,3 +55,18 @@ target_include_directories(EmbeddedApp PRIVATE src)
 
 # Link the fmt library target (defined in Conan's fmtTargets.cmake)
 target_link_libraries(EmbeddedApp PRIVATE fmt::fmt)
+
+# 4. ARM BARE-METAL & QEMU SEMIHOSTING SPECIFICATIONS
+# When compiling with arm-none-eabi, link against rdimon (semihosting)
+# and nano.specs (lightweight standard library).
+if(CMAKE_CXX_COMPILER MATCHES "arm-none-eabi-")
+    message(STATUS "Configuring bare-metal ARM linker specifications for QEMU semihosting...")
+    target_link_options(EmbeddedApp PRIVATE
+        "-mcpu=cortex-m4"
+        "-mthumb"
+        "--specs=nano.specs"     # Minimized embedded C library
+        "--specs=rdimon.specs"   # Semihosting support for QEMU I/O
+    )
+    # Link the semihosting library
+    target_link_libraries(EmbeddedApp PRIVATE rdimon)
+endif()

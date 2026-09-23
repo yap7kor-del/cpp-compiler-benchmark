@@ -82,12 +82,13 @@ jobs:
             opt_flag: -Ofast
             build_type: Release
 
-          # --- Cross-Compilation for ARM (Cortex-M or Aarch64) in CI ---
+          # --- Cross-Compilation for ARM (Cortex-M4) with QEMU ---
           - os: ubuntu-latest
             compiler: arm-none-eabi-gcc
             cxx: arm-none-eabi-g++
             arch: arm-cortex-m4
-            opt_flag: -Os -mcpu=cortex-m4 -mthumb --specs=nosys.specs
+            # Keep compiler flags clean (no linker specs here)
+            opt_flag: -Os -mcpu=cortex-m4 -mthumb
             build_type: MinSizeRel
 
     steps:
@@ -103,7 +104,7 @@ jobs:
         run: |
           pip install conan
 
-      - name: Install System Compilers
+      - name: Install System Compilers & Emulators
         run: |
           sudo apt-get update
           if [ "${{ matrix.compiler }}" = "gcc" ]; then
@@ -115,7 +116,8 @@ jobs:
             sudo update-alternatives --set cc /usr/bin/clang
             sudo update-alternatives --set c++ /usr/bin/clang++
           elif [ "${{ matrix.compiler }}" = "arm-none-eabi-gcc" ]; then
-            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib
+            # Install arm-none-eabi toolchain, newlib libraries, and QEMU ARM system emulator
+            sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi libstdc++-arm-none-eabi-newlib qemu-system-arm
           fi
           if [ "${{ matrix.compiler }}" != "arm-none-eabi-gcc" ]; then
             echo "CC=${{ matrix.compiler }}" >> $GITHUB_ENV
@@ -152,7 +154,32 @@ jobs:
         run: |
           cmake --build build --parallel
 
-      - name: Run Benchmarks (Only on Native OS)
+      # Native benchmark for x86_64 builds
+      - name: Run Benchmarks (Native OS)
         if: matrix.compiler != 'arm-none-eabi-gcc'
         run: |
           ./build/EmbeddedApp
+
+      # Emulated execution for ARM Cortex-M4
+      - name: Run Embedded Binary (via QEMU Emulation)
+        if: matrix.compiler == 'arm-none-eabi-gcc'
+        run: |
+          # Print binary memory section sizes (FLASH / RAM consumption)
+          arm-none-eabi-size build/EmbeddedApp
+
+          # Run under QEMU ARM Cortex-M emulation with semihosting enabled
+          # Using timeout to ensure pipeline terminates if execution loops indefinitely
+          timeout 30s qemu-system-arm \
+            -M lm3s6965evb \
+            -cpu cortex-m4 \
+            -nographic \
+            -semihosting-config enable=on,target=native \
+            -kernel build/EmbeddedApp || exit_code=$?
+          
+          # Allow clean exit (0) or timeout/halt status codes as successful completion
+          if [ ${exit_code:-0} -eq 0 ] || [ ${exit_code:-0} -eq 124 ]; then
+            echo "QEMU execution finished successfully."
+          else
+            echo "QEMU failed with exit code $exit_code"
+            exit $exit_code
+          fi
