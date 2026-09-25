@@ -9,18 +9,18 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(STATUS "Configuring for GCC compiler...")
     add_compile_options(
-        -Wall 
-        -Wextra 
-        -Wpedantic 
+        -Wall
+        -Wextra
+        -Wpedantic
         -Wdouble-promotion
         -fdiagnostics-color=always
     )
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     message(STATUS "Configuring for Clang compiler...")
     add_compile_options(
-        -Wall 
-        -Wextra 
-        -Wpedantic 
+        -Wall
+        -Wextra
+        -Wpedantic
         -Wconversion
         -fcolor-diagnostics
     )
@@ -36,7 +36,7 @@ if(TARGET fmt::fmt-header-only AND NOT TARGET fmt::fmt)
 endif()
 
 # 3. DEFINE TARGET & LINK DEPENDENCIES
-add_executable(EmbeddedApp 
+add_executable(EmbeddedApp
     src/main.cpp
     src/math/matrix.hpp
     src/math/matrix.cpp

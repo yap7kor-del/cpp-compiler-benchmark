@@ -13,7 +13,7 @@ public:
     ~Benchmark() {
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start_).count();
-        fmt::print("[Benchmark] {:<30} took {:>8} microseconds ({:.3f} ms)\n", 
+        fmt::print("[Benchmark] {:<30} took {:>8} microseconds ({:.3f} ms)\n",
                    name_, duration, static_cast<double>(duration) / 1000.0);
     }
 

@@ -5,7 +5,7 @@ class ConanDemo(ConanFile):
     name = "conan_demo"
     version = "1.0"
     settings = "os", "compiler", "build_type", "arch"
-    
+
     # Required libraries for our intermediate application & CI pipeline testing
     requires = [
         "fmt/11.0.2",       # For beautiful, modern, high-speed terminal formatting

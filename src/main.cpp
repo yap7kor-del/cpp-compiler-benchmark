@@ -46,10 +46,10 @@ int main() {
     fmt::print("\n----------------------------------------------------\n");
     fmt::print("1. MATRIX MULTIPLICATION BENCHMARK (O(N^3))\n");
     fmt::print("----------------------------------------------------\n");
-    
+
     constexpr size_t MATRIX_SIZE = 250; // Size selected to make execution time distinct
     fmt::print("Initializing two {}x{} matrices...\n", MATRIX_SIZE, MATRIX_SIZE);
-    
+
     math::Matrix matA(MATRIX_SIZE, MATRIX_SIZE);
     math::Matrix matB(MATRIX_SIZE, MATRIX_SIZE);
     matA.fill_random();

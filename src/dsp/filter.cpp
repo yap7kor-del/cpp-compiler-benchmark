@@ -17,9 +17,9 @@ float FirFilter::tick(float sample) {
     }
 
     history_[write_idx_] = sample;
-    
+
     float output = 0.0f;
-    
+
     // Circular buffer dot product
     for (size_t i = 0; i < size; ++i) {
         size_t h_idx = (write_idx_ + size - i) % size;
@@ -33,7 +33,7 @@ float FirFilter::tick(float sample) {
 std::vector<float> FirFilter::process(const std::vector<float>& signal) {
     std::vector<float> output(signal.size(), 0.0f);
     size_t num_coeffs = coeffs_.size();
-    
+
     // Nested loop structure
     // Perfect target for auto-vectorization when optimized (-O3, -Ofast).
     // In unoptimized mode (-O0), this is very slow due to repeated memory lookups.
@@ -46,21 +46,21 @@ std::vector<float> FirFilter::process(const std::vector<float>& signal) {
         }
         output[n] = sum;
     }
-    
+
     return output;
 }
 
 std::vector<float> FirFilter::process_unrolled(const std::vector<float>& signal) {
     std::vector<float> output(signal.size(), 0.0f);
     size_t num_coeffs = coeffs_.size();
-    
+
     // We assume num_coeffs is a multiple of 4 for simplicity in this unrolled example.
     // Demonstrates hand-optimization vs compiler-optimization.
     // Modern compilers often optimize 'process()' better than manual unrolling!
     for (size_t n = 0; n < signal.size(); ++n) {
         float sum = 0.0f;
         size_t i = 0;
-        
+
         // Hand-unroll by 4
         for (; i + 3 < num_coeffs; i += 4) {
             float sum0 = (n >= i)     ? coeffs_[i]   * signal[n - i]     : 0.0f;
@@ -69,17 +69,17 @@ std::vector<float> FirFilter::process_unrolled(const std::vector<float>& signal)
             float sum3 = (n >= i + 3) ? coeffs_[i+3] * signal[n - (i+3)] : 0.0f;
             sum += sum0 + sum1 + sum2 + sum3;
         }
-        
+
         // Clean up remaining
         for (; i < num_coeffs; ++i) {
             if (n >= i) {
                 sum += coeffs_[i] * signal[n - i];
             }
         }
-        
+
         output[n] = sum;
     }
-    
+
     return output;
 }
 
