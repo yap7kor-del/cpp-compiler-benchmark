@@ -1,5 +1,6 @@
 compiler-options.txt
 temporary_folder
+.scannerwork
 
 # ==============================================================================
 # Build & Output Directories
@@ -24,6 +25,7 @@ Makefile
 !src/**/*.cmake
 compile_commands.json
 .cache/
+.vscode
 
 # ==============================================================================
 # Compiled Objects, Binaries, and Libraries
@@ -98,3 +100,11 @@ gmon.out
 Thumbs.db
 desktop.ini
 *.log
+
+graph.json
+bom.json
+clang-tidy-report.txt
+cppcheck-report.xml
+.github/workflows/security-pipeline.yml
+builder-image-repo
+.env

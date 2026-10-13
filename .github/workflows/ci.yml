@@ -1,10 +1,14 @@
 name: C/C++ CI Pipeline
 
 on:
+  # workflow_run:
+  #   workflows: ["Security Pipeline"] # Must match the exact 'name' of the first workflow
+  #   types:
+  #     - completed # Triggers when the security workflow finishes
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    branches: [ develop ]
+  # pull_request:
+  #   branches: [ main ]
 
 jobs:
   # Job 1: Static Analysis
