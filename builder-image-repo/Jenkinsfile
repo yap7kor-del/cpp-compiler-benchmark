@@ -10,7 +10,7 @@ node('docker') {
 
         sh """
             docker build \
-              -f Dockerfile.builder \
+              -f builder-image-repo/Dockerfile.builder \
               -t ${imageName}:${BUILD_NUMBER} \
               -t ${imageName}:latest \
               .
