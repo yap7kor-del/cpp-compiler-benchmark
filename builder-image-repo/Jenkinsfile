@@ -1,0 +1,50 @@
+node('docker') {
+
+    def imageName = "yap7kor02438/cpp-ci-agent"
+
+    stage('Checkout') {
+        checkout scm
+    }
+
+    stage('Build Agent Image') {
+
+        sh """
+            docker build \
+              -f Dockerfile.builder \
+              -t ${imageName}:${BUILD_NUMBER} \
+              -t ${imageName}:latest \
+              .
+        """
+    }
+
+    stage('Test Agent Image') {
+
+        sh """
+            docker run --rm \
+              ${imageName}:${BUILD_NUMBER} \
+              conan --version
+        """
+
+        sh """
+            docker run --rm \
+              ${imageName}:${BUILD_NUMBER} \
+              cmake --version
+        """
+    }
+
+    stage('Push Agent Image') {
+
+        docker.withRegistry(
+            'https://index.docker.io/v1/',
+            'dockerhub-creds'
+        ) {
+
+            def img = docker.image(
+                "${imageName}:${BUILD_NUMBER}"
+            )
+
+            img.push()
+            img.push('latest')
+        }
+    }
+}

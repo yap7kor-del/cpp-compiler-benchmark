@@ -106,5 +106,4 @@ bom.json
 clang-tidy-report.txt
 cppcheck-report.xml
 .github/workflows/security-pipeline.yml
-builder-image-repo
 .env
