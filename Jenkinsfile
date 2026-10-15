@@ -54,6 +54,7 @@ node('built-in') {
     def imageName = "yap7kor/myappconan:${BUILD_NUMBER}"
 
     stage('Checkout') {
+            cleanWs()
         checkout scm
     }
 
