@@ -51,7 +51,8 @@ properties([
 ])
 node('built-in') {
 
-    def imageName = "yap7kor/myappconan:${BUILD_NUMBER}"
+    def imageName = "${params.DOCKER_IMAGE}:${BUILD_NUMBER}"
+    def latestImage = "${params.DOCKER_IMAGE}:latest"
 
     stage('Checkout') {
             cleanWs()
@@ -112,20 +113,29 @@ node('built-in') {
     }
 
     stage('Docker Build') {
-
-        script {
-            dockerImage = docker.build(imageName)
-        }
+        sh """
+            docker build -t ${imageName} -t ${latestImage} .
+        """
     }
 
     stage('Push Image') {
+            // 2. Use withCredentials + --password-stdin to secure the token
+        withCredentials([usernamePassword(
+            credentialsId: 'dockerhub-creds',
+            usernameVariable: 'DOCKER_USER',
+            passwordVariable: 'DOCKER_PASS'
+        )]) {
+            sh """
+                # Secure login via standard input (no CLI password exposure)
+                echo "\$DOCKER_PASS" | docker login -u "\$DOCKER_USER" --password-stdin
 
-        docker.withRegistry(
-            'https://index.docker.io/v1/',
-            'dockerhub-creds'
-        ) {
-            dockerImage.push()
-            dockerImage.push('latest')
+                # Push versioned and latest tags
+                docker push ${imageName}
+                docker push ${latestImage}
+
+                # Logout to clear credentials
+                docker logout
+            """
         }
     }
 }
