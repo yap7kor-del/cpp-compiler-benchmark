@@ -100,6 +100,7 @@ node('built-in') {
 
     stage('Generate SBOM') {
         sh '''
+            conan config install https://github.com/conan-io/conan-extensions.git
             conan sbom:cyclonedx --format 1.4_json . > sbom.json
         '''
     }
