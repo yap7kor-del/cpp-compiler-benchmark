@@ -49,7 +49,7 @@ properties([
 
     disableConcurrentBuilds()
 ])
-node('linux') {
+node('built-in') {
 
     def imageName = "yap7kor/myappconan:${BUILD_NUMBER}"
 
