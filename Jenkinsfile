@@ -67,24 +67,21 @@ node('built-in') {
     }
 
     stage('Conan Install') {
-
         lock(resource: "conan-cache-${env.NODE_NAME}") {
-
-            sh '''
+            sh """
                 conan install . \
-                    --output-folder=build \
-                    --build=missing
-                    -s build_type=${BUILD_TYPE} \
-            '''
+                --build=missing \
+                -s build_type=${params.BUILD_TYPE}
+          """
         }
-    }
+   }
 
     stage('Configure') {
-        sh '''
+        sh """
             cmake -S . -B build \
-              -DCMAKE_TOOLCHAIN_FILE=build/${BUILD_TYPE}/generators/conan_toolchain.cmake \
-              -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
-        '''
+            -DCMAKE_TOOLCHAIN_FILE=build/${params.BUILD_TYPE}/generators/conan_toolchain.cmake \
+            -DCMAKE_BUILD_TYPE=${params.BUILD_TYPE}
+       """
     }
 
     stage('Build') {
@@ -101,8 +98,7 @@ node('built-in') {
 
     stage('Generate SBOM') {
         sh '''
-            cyclonedx-conan \
-              --output-file sbom.json
+            conan sbom:cyclonedx --format 1.4_json . > sbom.json
         '''
     }
 
