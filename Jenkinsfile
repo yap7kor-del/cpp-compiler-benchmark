@@ -70,6 +70,7 @@ node('built-in') {
     stage('Conan Install') {
         lock(resource: "conan-cache-${env.NODE_NAME}") {
             sh """
+                conan profile detect --force || true
                 conan install . \
                 --build=missing \
                 -s build_type=${params.BUILD_TYPE}
