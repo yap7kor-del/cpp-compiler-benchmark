@@ -74,6 +74,7 @@ node('built-in') {
                 conan install . \
                     --output-folder=build \
                     --build=missing
+                    -s build_type=${BUILD_TYPE} \
             '''
         }
     }
@@ -81,8 +82,8 @@ node('built-in') {
     stage('Configure') {
         sh '''
             cmake -S . -B build \
-              -DCMAKE_TOOLCHAIN_FILE=build/conan_toolchain.cmake \
-              -DCMAKE_BUILD_TYPE=Release
+              -DCMAKE_TOOLCHAIN_FILE=build/${BUILD_TYPE}/generators/conan_toolchain.cmake \
+              -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
         '''
     }
 
