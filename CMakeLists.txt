@@ -36,16 +36,20 @@ if(TARGET fmt::fmt-header-only AND NOT TARGET fmt::fmt)
 endif()
 
 # 3. DEFINE TARGET & LINK DEPENDENCIES
-add_executable(EmbeddedApp
-    src/main.cpp
+add_library(app_core STATIC
     src/math/matrix.hpp
     src/math/matrix.cpp
     src/dsp/filter.hpp
     src/dsp/filter.cpp
 )
+target_include_directories(app_core PUBLIC src)
+
+add_executable(EmbeddedApp
+    src/main.cpp
+)
 
 target_include_directories(EmbeddedApp PRIVATE src)
-target_link_libraries(EmbeddedApp PRIVATE fmt::fmt)
+target_link_libraries(EmbeddedApp PRIVATE app_core fmt::fmt)
 
 # 4. ARM BARE-METAL LINKER SPECIFICATIONS (CORTEX-M3)
 if(CMAKE_CXX_COMPILER MATCHES "arm-none-eabi-")
@@ -59,4 +63,44 @@ if(CMAKE_CXX_COMPILER MATCHES "arm-none-eabi-")
     )
     # Link the semihosting runtime library
     target_link_libraries(EmbeddedApp PRIVATE rdimon)
+endif()
+
+# 5. UNIT TESTING CONFIGURATION
+include(CTest)
+
+if(BUILD_TESTING AND NOT CMAKE_CXX_COMPILER MATCHES "arm-none-eabi-")
+    find_package(GTest QUIET)
+
+    if(GTest_FOUND OR TARGET GTest::gtest OR TARGET gtest::gtest)
+        # Select GTest main target (supports both Conan CMakeDeps and CMake FindGTest)
+        if(TARGET GTest::gtest_main)
+            set(GTEST_MAIN_TARGET GTest::gtest_main)
+        elseif(TARGET gtest::gtest_main)
+            set(GTEST_MAIN_TARGET gtest::gtest_main)
+        else()
+            set(GTEST_MAIN_TARGET GTest::gtest)
+        endif()
+
+        add_executable(unit_tests
+            tests/test_matrix.cpp
+            tests/test_filter.cpp
+            tests/test_benchmark.cpp
+        )
+
+        target_include_directories(unit_tests PRIVATE src)
+        target_link_libraries(unit_tests PRIVATE
+            app_core
+            ${GTEST_MAIN_TARGET}
+            fmt::fmt
+        )
+
+        include(GoogleTest OPTIONAL RESULT_VARIABLE HAVE_GOOGLE_TEST)
+        if(HAVE_GOOGLE_TEST)
+            gtest_discover_tests(unit_tests DISCOVERY_TIMEOUT 30)
+        else()
+            add_test(NAME unit_tests COMMAND unit_tests)
+        endif()
+    else()
+        message(STATUS "GTest not found; skipping unit test target creation.")
+    endif()
 endif()
