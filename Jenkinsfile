@@ -84,6 +84,7 @@ node('built-in') {
             cmake -S . -B build \
             -DCMAKE_TOOLCHAIN_FILE=build/${params.BUILD_TYPE}/generators/conan_toolchain.cmake \
             -DCMAKE_BUILD_TYPE=${params.BUILD_TYPE}
+            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
        """
     }
 
@@ -108,7 +109,9 @@ node('built-in') {
 
     stage('Cppcheck') {
         sh '''
-            cppcheck src
+            cppcheck --project=build-release/compile_commands.json \
+                     --xml --output-file=cppcheck-report.xml
+
         '''
     }
 
